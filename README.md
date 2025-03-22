@@ -1,6 +1,5 @@
 # Supermarket Sales Dashboard
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://www.python.org/)
 [![React](https://img.shields.io/badge/React-17.0.2+-61DAFB.svg)](https://reactjs.org/)
 [![Flask](https://img.shields.io/badge/Flask-2.0.1+-000000.svg)](https://flask.palletsprojects.com/)
@@ -8,7 +7,6 @@
 
 An interactive data analytics dashboard for visualizing and analyzing supermarket sales trends, built with Flask, Streamlit, and React.
 
-![Dashboard Preview](https://via.placeholder.com/800x400?text=Supermarket+Sales+Dashboard)
 
 ## 🚀 Features
 
