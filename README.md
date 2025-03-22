@@ -119,4 +119,4 @@ npm test
 
 
 
-Project Link: [https://github.com/yourusername/supermarket-dashboard](https://github.com/yourusername/supermarket-dashboard)
+Project Link: [https://github.com/Manas-Singh56/supermarket-dashboard](https://github.com/Manas-Singh56/supermarket-dashboard)
