@@ -91,38 +91,9 @@ npm start
 - Toggle between different visualization types using the tabs
 - Hover over charts for detailed tooltips
 
-## 📁 Project Structure
 
 ```
-supermarket-dashboard/
-├── app.py                  # Flask entry point
-├── streamlit_app.py        # Streamlit application
-├── requirements.txt        # Python dependencies
-├── data/
-│   └── supermarketsales.csv # Dataset
-├── backend/
-│   ├── models/             # Data models
-│   ├── routes/             # API endpoints
-│   └── utils/              # Helper functions
-└── frontend/
-    ├── public/             # Static assets
-    ├── src/                # React source code
-    │   ├── components/     # UI components
-    │   ├── services/       # API services
-    │   ├── views/          # Page layouts
-    │   └── App.js          # Main component
-    └── package.json        # JS dependencies
-```
 
-## 🔄 API Endpoints
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/sales/summary` | GET | Overall sales metrics |
-| `/api/sales/by-category` | GET | Category breakdown |
-| `/api/sales/by-date` | GET | Time-series data |
-| `/api/customers` | GET | Customer demographics |
-| `/api/branches` | GET | Branch comparisons |
 
 ## 🛠️ Development
 
@@ -136,13 +107,7 @@ cd frontend
 npm test
 ```
 
-### Environment Variables
-Create a `.env` file in the root directory:
-```
-FLASK_ENV=development
-DATABASE_URL=sqlite:///sales.db
-PORT=5000
-```
+
 
 ## 🤝 Contributing
 
