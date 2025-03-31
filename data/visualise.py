@@ -185,3 +185,62 @@ def enable_data_download(filtered_data):
 
     except Exception as e:
         st.error(f"Error during CSV export: {e}")
+def plot_prophet_forecast(forecast, title="Sales Forecast with Prophet"):
+    """
+    Plot the Prophet forecast results.
+    
+    Parameters:
+    -----------
+    forecast : pandas.DataFrame
+        DataFrame returned from Prophet's predict() method (merged with actual values if available),
+        containing at least the columns:
+            - 'ds' (dates)
+            - 'yhat' (predicted values)
+            - 'yhat_lower' (lower prediction bound)
+            - 'yhat_upper' (upper prediction bound)
+            - optionally, 'y' (actual values)
+    title : str, default="Sales Forecast with Prophet"
+        Title for the plot.
+        
+    Returns:
+    --------
+    fig : plotly.graph_objs._figure.Figure
+        A Plotly Figure object.
+    """
+    # Create the main line plot for predicted sales
+    fig = px.line(
+        forecast, 
+        x='ds', 
+        y='yhat', 
+        title=title, 
+        labels={'ds': 'Date', 'yhat': 'Predicted Sales'}
+    )
+    
+    # If actual sales are available, add them as markers
+    if 'y' in forecast.columns:
+        fig.add_scatter(
+            x=forecast['ds'], 
+            y=forecast['y'], 
+            mode='markers', 
+            name='Actual Sales',
+            marker=dict(color='black', size=5)
+        )
+    
+    # Add the lower and upper bounds for prediction intervals
+    fig.add_scatter(
+        x=forecast['ds'],
+        y=forecast['yhat_lower'],
+        mode='lines',
+        name='Lower Bound',
+        line=dict(dash='dash', color='gray')
+    )
+    
+    fig.add_scatter(
+        x=forecast['ds'],
+        y=forecast['yhat_upper'],
+        mode='lines',
+        name='Upper Bound',
+        line=dict(dash='dash', color='gray')
+    )
+    
+    return fig

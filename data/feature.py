@@ -1,12 +1,18 @@
 
 import pandas as pd
 import logging
-from sklearn.linear_model import LinearRegression
 import numpy as np
-
+from prophet import Prophet
+import pandas as pd
+import numpy as np
 # NEW IMPORTS FOR CUSTOMER SEGMENTATION
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
+
+# NEW IMPORTS FOR XGBOOST
+import xgboost as xgb
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -53,33 +59,7 @@ def add_features(df):
         logging.error(f"Error in feature engineering: {e}")
         return df
 
-# Sales Forecasting
-def sales_forecast(df):
-    try:
-        if 'Date' in df.columns and 'Total' in df.columns:
-            df = df.dropna(subset=['Date', 'Total'])
-            df['Date_ordinal'] = df['Date'].apply(lambda x: x.toordinal())
-            
-            X = df[['Date_ordinal']]
-            y = df['Total']
-            
-            # Train Model
-            model = LinearRegression().fit(X, y)
-            logging.info("Sales Forecast Model Trained Successfully.")
 
-            # Predict for Next 30 Days
-            future_dates = pd.date_range(df['Date'].max() + pd.Timedelta(days=1), periods=30)
-            future_ordinal = np.array([date.toordinal() for date in future_dates]).reshape(-1, 1)
-            predictions = model.predict(future_ordinal)
-
-            forecast_df = pd.DataFrame({'Date': future_dates, 'Predicted Sales': predictions})
-            return forecast_df
-        else:
-            logging.warning("Date or Total column missing. Forecasting skipped.")
-            return pd.DataFrame()
-    except Exception as e:
-        logging.error(f"Error in sales forecasting: {e}")
-        return pd.DataFrame()
 
 # NEW FUNCTION: CUSTOMER SEGMENTATION
 def customer_segmentation(df, n_clusters=3):
@@ -121,3 +101,93 @@ def customer_segmentation(df, n_clusters=3):
     except Exception as e:
         logging.error(f"Error in customer segmentation: {e}")
         return df
+
+#Prophet
+
+def predict_sales_with_prophet(sales_data, periods=30, yearly_seasonality=True, weekly_seasonality=True, daily_seasonality=False):
+    """
+    Predict future sales using Facebook Prophet.
+    
+    Parameters:
+    -----------
+    sales_data : pandas.DataFrame
+        DataFrame containing date column 'ds' and sales column 'y'
+        (if your columns have different names, rename them before passing)
+    periods : int, default=30
+        Number of periods to forecast into the future
+    yearly_seasonality : bool or int, default=True
+        Whether to include yearly seasonality
+    weekly_seasonality : bool or int, default=True
+        Whether to include weekly seasonality
+    daily_seasonality : bool or int, default=False
+        Whether to include daily seasonality
+        
+    Returns:
+    --------
+    forecast : pandas.DataFrame
+        DataFrame with the original data and forecast including:
+        - ds: dates
+        - y: actual values (where available)
+        - yhat: predicted values
+        - yhat_lower: lower bound of prediction interval
+        - yhat_upper: upper bound of prediction interval
+    model : Prophet model
+        Trained Prophet model
+    """
+    # Create a copy of the dataframe to avoid modifying the original
+    df = sales_data.copy()
+    
+    # Ensure the data is properly formatted for Prophet
+    # Prophet requires columns named 'ds' and 'y'
+    if 'ds' not in df.columns or 'y' not in df.columns:
+        raise ValueError("DataFrame must contain 'ds' (date) and 'y' (sales) columns")
+    
+    # Initialize the Prophet model
+    model = Prophet(
+        yearly_seasonality=yearly_seasonality,
+        weekly_seasonality=weekly_seasonality,
+        daily_seasonality=daily_seasonality
+    )
+    
+    # Add additional regressors if needed
+    # For example: model.add_regressor('marketing_spend')
+    
+    # Fit the model to the data
+    model.fit(df)
+    
+    # Create a dataframe for future dates
+    future = model.make_future_dataframe(periods=periods)
+    
+    # Generate the forecast
+    forecast = model.predict(future)
+    
+    # Merge with actual values
+    forecast = pd.merge(forecast, df, on='ds', how='left')
+    
+    return forecast, model
+
+def prepare_sales_data_for_prophet(df, date_column, sales_column):
+    """
+    Prepare sales data for Prophet by renaming columns to 'ds' and 'y'.
+    
+    Parameters:
+    -----------
+    df : pandas.DataFrame
+        DataFrame containing sales data
+    date_column : str
+        Name of the column containing dates
+    sales_column : str
+        Name of the column containing sales values
+        
+    Returns:
+    --------
+    prophet_df : pandas.DataFrame
+        DataFrame with columns renamed for Prophet
+    """
+    prophet_df = df.copy()
+    prophet_df = prophet_df.rename(columns={date_column: 'ds', sales_column: 'y'})
+    
+    # Ensure date column is datetime type
+    prophet_df['ds'] = pd.to_datetime(prophet_df['ds'])
+    
+    return prophet_df

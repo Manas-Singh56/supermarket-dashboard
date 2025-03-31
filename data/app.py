@@ -6,7 +6,7 @@ import plotly.express as px
 import matplotlib.pyplot as plt
 import seaborn as sns
 from datetime import datetime, timedelta
-from feature import clean_data, add_features, sales_forecast, customer_segmentation
+from feature import clean_data, add_features,customer_segmentation, predict_sales_with_prophet,prepare_sales_data_for_prophet
 from visualise import plot_sales_heatmap, plot_category_sales, enable_data_download , sales_by_hour,sales_by_Time,sales_by_product_category,product_specific_analysis
 
 st.title("Supermarket Sales Dashboard")
@@ -16,7 +16,7 @@ st.header("Initial Data Exploration & Cleaning")
 @st.cache_resource
 def load_data():
     # Load the dataset from the data folder
-    df = pd.read_csv(r"C:\Users\hp\Desktop\supermarket_dashboard\data\supermarket_sales.csv")
+    df = pd.read_csv("supermarket_sales.csv")
     return df
 
 # Load the raw data
@@ -179,16 +179,13 @@ if 'Date' in data_cleaned.columns and 'Total' in data_cleaned.columns:
 if 'Product line' in data_cleaned.columns and 'Total' in data_cleaned.columns:
     plot_category_sales(data_cleaned)
 
-# Forecasting
-st.subheader("Sales Forecast for Next 30 Days")
-forecast_df = sales_forecast(data_cleaned)
+from visualise import plot_prophet_forecast
+...
+prophet_ready_df = prepare_sales_data_for_prophet(data_cleaned, date_column='Date', sales_column='Total')
+forecast_df, model = predict_sales_with_prophet(prophet_ready_df, periods=30)
+fig = plot_prophet_forecast(forecast_df)
+st.plotly_chart(fig)
 
-if not forecast_df.empty:
-    st.write(forecast_df)
-    fig = px.line(forecast_df, x='Date', y='Predicted Sales', title="Sales Forecast")
-    st.plotly_chart(fig)
-else:
-    st.warning("Sales Forecasting could not be performed.")
 
 # Customer Segmentation
 st.header("Customer Segmentation Analysis")
