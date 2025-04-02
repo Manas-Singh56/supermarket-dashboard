@@ -1,16 +1,12 @@
 
 import pandas as pd
-import plotly.express as px
-import matplotlib.pyplot as plt
-import seaborn as sns
 import logging
 import numpy as np
 from prophet import Prophet
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import accuracy_score, classification_report, confusion_matrix,mean_squared_error, r2_score, mean_absolute_error
+from sklearn.metrics import accuracy_score
 import streamlit as st
-import xgboost as xgb
 
 # NEW IMPORTS FOR CUSTOMER SEGMENTATION
 from sklearn.cluster import KMeans
@@ -153,7 +149,6 @@ def predict_sales_with_prophet(sales_data, periods=30, yearly_seasonality=True, 
     )
     
     # Add additional regressors if needed
-    # For example: model.add_regressor('marketing_spend')
     
     # Fit the model to the data
     model.fit(df)
@@ -197,11 +192,6 @@ def prepare_sales_data_for_prophet(df, date_column, sales_column):
 
 
 
-
-
-# Prepare data for churn prediction
-
-
 #churn prediction
 
 # Prepare data for churn prediction
@@ -233,7 +223,6 @@ def prepare_churn_data(df):
         # Features and target
         X = df[['Total', 'Quantity', 'Average Purchase Value', 'Days Since Last Purchase']]
         y = df['Churn'].astype(int)
-        
         return X, y
     except Exception as e:
         logging.error(f"Error preparing churn data: {e}")
@@ -241,7 +230,6 @@ def prepare_churn_data(df):
 
 
 def train_churn_model(X, y):
-
     try:
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
         model = RandomForestClassifier(n_estimators=100, random_state=42)
