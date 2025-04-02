@@ -1,9 +1,8 @@
 import plotly.express as px
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
 import seaborn as sns
-# Function to Plot Heatmap for Sales by Day and Hour
+
 def plot_sales_heatmap(filtered_data):
     try:
         if filtered_data.empty:
@@ -31,16 +30,22 @@ def plot_sales_heatmap(filtered_data):
         # Aggregate for Heatmap
         heatmap_data = filtered_data.groupby(['Day', 'Hour'])['Total'].sum().reset_index()
 
-        # Plot Heatmap
+        # Create Heatmap with better visuals
         fig = px.density_heatmap(
-            heatmap_data,
-            x='Hour',
-            y='Day',
-            z='Total',
-            color_continuous_scale='Viridis',
-            category_orders={"Day": ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']}
+            heatmap_data, x='Hour', y='Day', z='Total',
+            color_continuous_scale='Plasma',  # More vibrant colors
+            category_orders={"Day": ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']},
+            title="Sales Heatmap by Day and Hour"
         )
-        fig.update_layout(title='Sales Heatmap by Day and Hour', xaxis_title='Hour', yaxis_title='Day')
+
+        fig.update_layout(
+            xaxis_title="Hour of the Day",
+            yaxis_title="Day of the Week",
+            font=dict(family="Arial", size=12),
+            coloraxis_colorbar=dict(title="Total Sales"),
+            template="plotly_white"
+        )
+
         st.plotly_chart(fig)
 
     except Exception as e:
@@ -51,36 +56,48 @@ def plot_sales_heatmap(filtered_data):
 def sales_by_product_category(filtered_data):
     if 'Product line' in filtered_data.columns and 'Total' in filtered_data.columns:
         st.write("### Sales by Product Category")
-    
-    fig, ax = plt.subplots(figsize=(10, 6))
-    category_sales = filtered_data.groupby('Product line')['Total'].sum().sort_values(ascending=False)
-    sns.barplot(x=category_sales.index, y=category_sales.values, palette='viridis', ax=ax)
-    ax.set_xlabel('Product Category')
-    ax.set_ylabel('Total Sales')
-    ax.set_title('Total Sales by Product Category')
-    plt.xticks(rotation=45, ha='right')
-    plt.tight_layout()
-    st.pyplot(fig)
+
+        category_sales = filtered_data.groupby('Product line')['Total'].sum().reset_index()
+
+        fig = px.bar(category_sales, 
+                     x='Product line', 
+                     y='Total', 
+                     color='Total',
+                     text='Total',
+                     color_continuous_scale='viridis')
+
+        fig.update_layout(
+            xaxis_title="Product Category",
+            yaxis_title="Total Sales",
+            title="Total Sales by Product Category",
+            xaxis_tickangle=-45
+        )
+
+        st.plotly_chart(fig)
 
 
 
 # Sales Trends Over Time
+import plotly.express as px
+
 def sales_by_Time(filtered_data):
     if 'Date' in filtered_data.columns and 'Total' in filtered_data.columns:
         st.write("### Sales Trends Over Time")
     
-    # Daily sales trend
-    daily_sales = filtered_data.groupby(filtered_data['Date'].dt.date)['Total'].sum().reset_index()
-    daily_sales.columns = ['Date', 'Total Sales']
+        # Convert 'Date' column to datetime if not already
+        filtered_data['Date'] = pd.to_datetime(filtered_data['Date'])
     
-    fig, ax = plt.subplots(figsize=(12, 6))
-    sns.lineplot(data=daily_sales, x='Date', y='Total Sales', marker='o', ax=ax)
-    ax.set_xlabel('Date')
-    ax.set_ylabel('Total Sales')
-    ax.set_title('Daily Sales Trend')
-    plt.xticks(rotation=45)
-    plt.tight_layout()
-    st.pyplot(fig)
+        # Daily sales trend
+        daily_sales = filtered_data.groupby(filtered_data['Date'].dt.date)['Total'].sum().reset_index()
+        daily_sales.columns = ['Date', 'Total Sales']
+
+        # Plotly line chart
+        fig = px.line(daily_sales, x='Date', y='Total Sales', 
+                      markers=True, title='Daily Sales Trend')
+        fig.update_layout(xaxis_title='Date', yaxis_title='Total Sales', 
+                          xaxis_tickangle=-45, template='plotly_dark')
+        
+        st.plotly_chart(fig)
 
 
 # plot_sales_by_hour
@@ -117,33 +134,39 @@ def sales_by_hour(data):
     fig.update_layout(xaxis=dict(tickmode='linear', tick0=0, dtick=1))
     st.plotly_chart(fig)
     # Product-specific analysis
+import plotly.express as px
+
 def product_specific_analysis(filtered_data):
     if 'Product line' in filtered_data.columns and 'Unit price' in filtered_data.columns and 'Quantity' in filtered_data.columns:
         st.subheader("Product Analysis")
-    
-    # Average unit price by product category
-    avg_price = filtered_data.groupby('Product line')['Unit price'].mean().sort_values(ascending=False)
-    
-    fig, ax = plt.subplots(figsize=(10, 6))
-    sns.barplot(x=avg_price.index, y=avg_price.values, palette='muted', ax=ax)
-    ax.set_xlabel('Product Category')
-    ax.set_ylabel('Average Unit Price')
-    ax.set_title('Average Unit Price by Product Category')
-    plt.xticks(rotation=45, ha='right')
-    plt.tight_layout()
-    st.pyplot(fig)
-    
-    # Total quantity sold by product category
-    qty_sold = filtered_data.groupby('Product line')['Quantity'].sum().sort_values(ascending=False)
-    
-    fig, ax = plt.subplots(figsize=(10, 6))
-    sns.barplot(x=qty_sold.index, y=qty_sold.values, palette='Blues_d', ax=ax)
-    ax.set_xlabel('Product Category')
-    ax.set_ylabel('Total Quantity Sold')
-    ax.set_title('Quantity Sold by Product Category')
-    plt.xticks(rotation=45, ha='right')
-    plt.tight_layout()
-    st.pyplot(fig) 
+
+        # Average unit price by product category
+        avg_price = filtered_data.groupby('Product line')['Unit price'].mean().reset_index()
+
+        fig1 = px.bar(avg_price, 
+                      x='Product line', 
+                      y='Unit price', 
+                      color='Unit price',
+                      text='Unit price',
+                      title="Average Unit Price by Product Category",
+                      color_continuous_scale='viridis')
+
+        fig1.update_layout(xaxis_tickangle=-45, xaxis_title="Product Category", yaxis_title="Average Unit Price")
+        st.plotly_chart(fig1)
+
+        # Total quantity sold by product category
+        qty_sold = filtered_data.groupby('Product line')['Quantity'].sum().reset_index()
+
+        fig2 = px.bar(qty_sold, 
+                      x='Product line', 
+                      y='Quantity', 
+                      color='Quantity',
+                      text='Quantity',
+                      title="Quantity Sold by Product Category",
+                      color_continuous_scale='blues')
+
+        fig2.update_layout(xaxis_tickangle=-45, xaxis_title="Product Category", yaxis_title="Total Quantity Sold")
+        st.plotly_chart(fig2)
 
 # Function to Plot Sales by Product Category
 def plot_category_sales(filtered_data):
