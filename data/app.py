@@ -5,9 +5,10 @@ import io
 import plotly.express as px
 import matplotlib.pyplot as plt
 import seaborn as sns
+import plotly.figure_factory as ff
 from datetime import datetime, timedelta
-from feature import clean_data, add_features,customer_segmentation, predict_sales_with_prophet,prepare_sales_data_for_prophet
-from visualise import plot_sales_heatmap, plot_category_sales, enable_data_download , sales_by_hour,sales_by_Time,sales_by_product_category,product_specific_analysis
+from feature import clean_data, add_features, customer_segmentation,prepare_churn_data,train_churn_model, predict_sales_with_prophet,prepare_sales_data_for_prophet
+from visualise import plot_prophet_forecast,plot_sales_heatmap, plot_category_sales, enable_data_download , sales_by_hour,sales_by_Time,sales_by_product_category,product_specific_analysis
 
 st.title("Supermarket Sales Dashboard")
 st.header("Initial Data Exploration & Cleaning")
@@ -16,7 +17,7 @@ st.header("Initial Data Exploration & Cleaning")
 @st.cache_resource
 def load_data():
     # Load the dataset from the data folder
-    df = pd.read_csv("supermarket_sales.csv")
+    df = pd.read_csv(r"C:\Users\hp\Desktop\supermarket_dashboard\data\supermarket_sales.csv")
     return df
 
 # Load the raw data
@@ -152,21 +153,36 @@ st.subheader("Correlation Analysis")
 
 # Select only numeric columns for correlation
 numeric_cols = filtered_data.select_dtypes(include=['float64', 'int64']).columns.tolist()
+    
 if len(numeric_cols) > 1:
     corr_matrix = filtered_data[numeric_cols].corr()
-    
-    fig, ax = plt.subplots(figsize=(10, 8))
-    sns.heatmap(corr_matrix, annot=True, cmap='coolwarm', fmt=".2f", linewidths=0.5, ax=ax)
-    ax.set_title('Correlation Matrix of Numeric Variables')
-    plt.tight_layout()
-    st.pyplot(fig)
-    
+        
+    # Convert correlation matrix to heatmap format
+    fig = ff.create_annotated_heatmap(
+            z=corr_matrix.values,
+            x=numeric_cols,
+            y=numeric_cols,
+            colorscale="RdBu",
+            annotation_text=corr_matrix.round(2).values,
+            showscale=True
+        )
+
+    fig.update_layout(
+            title="📊 Correlation Matrix of Numeric Variables",
+            xaxis_title="Features",
+            yaxis_title="Features",
+            font=dict(family="Arial", size=12),
+            width=800, height=700
+        )
+
+    st.plotly_chart(fig)
+
     st.write("""
-    ### Correlation Analysis Insights:
-    - Strong positive correlations indicate variables that increase together
-    - Strong negative correlations indicate when one variable increases, the other decreases
-    - Values close to zero indicate little to no relationship between variables
-    """)
+        ### **Correlation Analysis Insights**
+        - 🔵 **Strong positive correlations** (closer to `1.0`) indicate variables increasing together.
+        - 🔴 **Strong negative correlations** (closer to `-1.0`) indicate inverse relationships.
+        - ⚪ **Values close to `0.0`** suggest little or no correlation.
+        """)
 # Product-specific analysis
 product_specific_analysis(filtered_data)
 
@@ -179,7 +195,8 @@ if 'Date' in data_cleaned.columns and 'Total' in data_cleaned.columns:
 if 'Product line' in data_cleaned.columns and 'Total' in data_cleaned.columns:
     plot_category_sales(data_cleaned)
 
-from visualise import plot_prophet_forecast
+# Forecasting
+st.subheader("Sales Forecast")
 ...
 prophet_ready_df = prepare_sales_data_for_prophet(data_cleaned, date_column='Date', sales_column='Total')
 forecast_df, model = predict_sales_with_prophet(prophet_ready_df, periods=30)
@@ -301,6 +318,34 @@ with tab2:
         st.pyplot(g_pay.fig)
     else:
         st.warning("Cannot display Payment Method by Cluster—missing 'Payment' or 'Cluster' column.")
+
+
+
+# Churn Prediction
+st.header("Churn Prediction")
+
+# Prepare data for churn prediction
+X, y = prepare_churn_data(data_cleaned)
+
+if X is not None and y is not None:
+    churn_model = train_churn_model(X, y)
+    if churn_model:
+        st.success("Churn Prediction Model Trained Successfully.")
+        
+        # Predict churn probabilities
+        data_cleaned['Churn Probability'] = churn_model.predict_proba(X)[:, 1]
+        st.write(data_cleaned[['Invoice ID', 'Total', 'Quantity', 'Churn Probability']].head())
+
+        # Visualization
+        st.subheader("Churn Probability Distribution")
+        fig = px.histogram(data_cleaned, x='Churn Probability', nbins=20, color_discrete_sequence=['#ff7f0e'])
+        st.plotly_chart(fig)
+    else:
+        st.error("Model training failed.")
+else:
+    st.warning("Not enough data available for churn prediction.")
+
+
 
 # Enable CSV Download
 enable_data_download(data_cleaned)
