@@ -17,7 +17,7 @@ st.header("Initial Data Exploration & Cleaning")
 @st.cache_resource
 def load_data():
     # Load the dataset from the data folder
-    df = pd.read_csv(r"C:\Users\hp\Desktop\supermarket_dashboard\data\supermarket_sales.csv")
+    df = pd.read_csv("D:\supermarket-dashboard\data\supermarket_sales.csv")
     return df
 
 # Load the raw data
@@ -107,17 +107,39 @@ sales_by_product_category(filtered_data)
 
 
 # Distribution of sales by payment method
+
 if 'Payment' in filtered_data.columns and 'Total' in filtered_data.columns:
     st.write("### Sales by Payment Method")
     
-    fig, ax = plt.subplots(figsize=(10, 6))
-    payment_sales = filtered_data.groupby('Payment')['Total'].sum().sort_values(ascending=False)
-    sns.barplot(x=payment_sales.index, y=payment_sales.values, palette='Set2', ax=ax)
-    ax.set_xlabel('Payment Method')
-    ax.set_ylabel('Total Sales')
-    ax.set_title('Total Sales by Payment Method')
-    plt.tight_layout()
-    st.pyplot(fig)
+    payment_sales = filtered_data.groupby('Payment')['Total'].sum().sort_values(ascending=False).reset_index()
+    
+    fig = px.bar(
+        payment_sales,
+        x='Payment',
+        y='Total',
+        title='Total Sales by Payment Method',
+        labels={'Payment': 'Payment Method', 'Total': 'Total Sales'},
+        color='Payment',
+        color_discrete_sequence=px.colors.qualitative.Set2
+    )
+    
+    # Customize the layout
+    fig.update_layout(
+        xaxis_title='Payment Method',
+        yaxis_title='Total Sales',
+        plot_bgcolor='white',
+        hoverlabel=dict(bgcolor="white", font_size=12),
+        margin=dict(l=20, r=20, t=40, b=20)
+    )
+    
+    # Add hover information
+    fig.update_traces(
+        hovertemplate='Payment Method: %{x}<br>Total Sales: %{y:,.2f}<extra></extra>'
+    )
+    
+    # Display the chart in Streamlit
+    st.plotly_chart(fig, use_container_width=True)
+
 
 # Distribution by customer demographics
 if 'Gender' in filtered_data.columns and 'Customer type' in filtered_data.columns and 'Total' in filtered_data.columns:
@@ -126,20 +148,38 @@ if 'Gender' in filtered_data.columns and 'Customer type' in filtered_data.column
     col1, col2 = st.columns(2)
     
     with col1:
-        fig, ax = plt.subplots(figsize=(6, 6))
-        gender_sales = filtered_data.groupby('Gender')['Total'].sum()
-        ax.pie(gender_sales, labels=gender_sales.index, autopct='%1.1f%%', startangle=90, colors=sns.color_palette('Set3'))
-        ax.set_title('Sales by Gender')
-        plt.tight_layout()
-        st.pyplot(fig)
+        gender_sales = filtered_data.groupby('Gender')['Total'].sum().reset_index()
+        fig_gender = px.pie(
+            gender_sales,
+            values='Total',
+            names='Gender',
+            title='Sales by Gender',
+            color_discrete_sequence=px.colors.qualitative.Set3,
+            hole=0.3  # Creates a donut chart for modern look
+        )
+        fig_gender.update_traces(textposition='inside', textinfo='percent+label')
+        fig_gender.update_layout(
+            legend_title_text='Gender',
+            margin=dict(t=50, b=0, l=0, r=0)
+        )
+        st.plotly_chart(fig_gender, use_container_width=True)
     
     with col2:
-        fig, ax = plt.subplots(figsize=(6, 6))
-        customer_type_sales = filtered_data.groupby('Customer type')['Total'].sum()
-        ax.pie(customer_type_sales, labels=customer_type_sales.index, autopct='%1.1f%%', startangle=90, colors=sns.color_palette('pastel'))
-        ax.set_title('Sales by Customer Type')
-        plt.tight_layout()
-        st.pyplot(fig)
+        customer_type_sales = filtered_data.groupby('Customer type')['Total'].sum().reset_index()
+        fig_cust_type = px.pie(
+            customer_type_sales,
+            values='Total',
+            names='Customer type',
+            title='Sales by Customer Type',
+            color_discrete_sequence=px.colors.qualitative.Pastel,
+            hole=0.3  # Creates a donut chart for modern look
+        )
+        fig_cust_type.update_traces(textposition='inside', textinfo='percent+label')
+        fig_cust_type.update_layout(
+            legend_title_text='Customer Type',
+            margin=dict(t=50, b=0, l=0, r=0)
+        )
+        st.plotly_chart(fig_cust_type, use_container_width=True)
 
 # Time-based analysis
 sales_by_Time(filtered_data)
