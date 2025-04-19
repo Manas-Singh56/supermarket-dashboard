@@ -1,0 +1,15 @@
+{
+  "files": {
+    "main.css": "/supermarket-dashboard/static/css/main.ee71c4bf.css",
+    "main.js": "/supermarket-dashboard/static/js/main.72d4fabf.js",
+    "static/js/453.d855a71b.chunk.js": "/supermarket-dashboard/static/js/453.d855a71b.chunk.js",
+    "index.html": "/supermarket-dashboard/index.html",
+    "main.ee71c4bf.css.map": "/supermarket-dashboard/static/css/main.ee71c4bf.css.map",
+    "main.72d4fabf.js.map": "/supermarket-dashboard/static/js/main.72d4fabf.js.map",
+    "453.d855a71b.chunk.js.map": "/supermarket-dashboard/static/js/453.d855a71b.chunk.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.ee71c4bf.css",
+    "static/js/main.72d4fabf.js"
+  ]
+}
