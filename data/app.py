@@ -1,13 +1,9 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
-import io
 import plotly.express as px
-import matplotlib.pyplot as plt
 import seaborn as sns
 import plotly.figure_factory as ff
-from datetime import datetime, timedelta
-from feature import clean_data, add_features, customer_segmentation, prepare_churn_data, train_churn_model, predict_sales_with_prophet, prepare_sales_data_for_prophet
+from feature import customer_segmentation, prepare_churn_data, train_churn_model, predict_sales_with_prophet, prepare_sales_data_for_prophet
 from visualise import plot_prophet_forecast, plot_sales_heatmap, plot_category_sales, enable_data_download, sales_by_hour, sales_by_Time, sales_by_product_category, product_specific_analysis
 
 st.title("Supermarket Sales Dashboard")
@@ -86,7 +82,7 @@ def load_data(uploaded_file=None, encoding="utf-8"):
         
         # Fall back to the default dataset
         try:
-            df = pd.read_csv("D:\supermarket-dashboard\data\supermarket_sales.csv")
+            df = pd.read_csv(r"C:\Users\hp\Desktop\supermarket_dashboard\data\supermarket_sales.csv")
             st.sidebar.info("Loading default dataset instead.")
             return df
         except Exception as e2:
@@ -98,7 +94,7 @@ def load_data(uploaded_file=None, encoding="utf-8"):
         st.sidebar.info("Loading default dataset instead.")
         # Fall back to the default dataset
         try:
-            df = pd.read_csv("D:\supermarket-dashboard\data\supermarket_sales.csv")
+            df = pd.read_csv(r"C:\Users\hp\Desktop\supermarket_dashboard\data\supermarket_sales.csv")
             return df
         except Exception as e2:
             st.error(f"Could not load default dataset: {e2}")
@@ -122,36 +118,19 @@ except Exception as e:
 st.header("Data Cleaning")
 try:
     st.write("Removing duplicates and handling missing values...")
-    
-    # Remove duplicate rows
     data_cleaned = data.drop_duplicates()
-    
-    # Fill missing values using forward fill
     data_cleaned = data_cleaned.fillna(method='ffill')
-    
-    # Convert the 'Date' column to datetime if it exists
     if 'Date' in data_cleaned.columns:
         data_cleaned['Date'] = pd.to_datetime(data_cleaned['Date'], errors='coerce')
     
     st.subheader("Cleaned Data Preview")
     st.write(data_cleaned.head())
     
-    # Only run customer segmentation if all required columns are present
-    try:
-        if all(col in data_cleaned.columns for col in ['Total', 'Quantity', 'Gender', 'Customer type']):
-            data_segmented = customer_segmentation(data_cleaned, n_clusters=3)
-            st.write("Data cleaning and customer segmentation complete.")
-        else:
-            st.warning("Cannot perform customer segmentation - required columns are missing.")
-            data_segmented = data_cleaned.copy()  # Use cleaned data without segmentation
-    except Exception as e:
-        st.error(f"Customer segmentation failed: {e}")
-        data_segmented = data_cleaned.copy()  # Use cleaned data without segmentation
         
 except Exception as e:
     st.error(f"Data cleaning failed: {e}")
-    data_cleaned = data.copy()  # Use the original data as fallback
-    data_segmented = data.copy()
+    data_cleaned = data.copy() 
+   
 
 # --- EXPLORATORY DATA ANALYSIS ---
 st.header("Exploratory Data Analysis")
@@ -228,10 +207,23 @@ try:
     # Display count of filtered records
     st.subheader(f"Filtered Data: {len(filtered_data)} records")
     
+    # Only run customer segmentation if all required columns are present
+    try:
+        if all(col in filtered_data.columns for col in ['Total', 'Quantity', 'Gender', 'Customer type']):
+            data_segmented = customer_segmentation(filtered_data, n_clusters=3)
+            st.write("Data cleaning and customer segmentation complete.")
+        else:
+            st.warning("Cannot perform customer segmentation - required columns are missing.")
+            data_segmented = filtered_data.copy()  # Use cleaned data without segmentation
+    except Exception as e:
+        st.error(f"Customer segmentation failed: {e}")
+        data_segmented = filtered_data.copy()  # Use cleaned data without segmentation
+    
 except Exception as e:
     st.error(f"Error filtering data: {e}")
     filtered_data = data_cleaned.copy()
     st.subheader(f"Showing all data: {len(filtered_data)} records")
+    data_segmented = data_cleaned.copy()
 
 # --- ANALYSIS BY DISTRIBUTION ---
 st.subheader("Sales Distribution Analysis")
@@ -249,7 +241,7 @@ except Exception as e:
 # Distribution of sales by payment method
 try:
     if 'Payment' in filtered_data.columns and 'Total' in filtered_data.columns:
-        st.write("### Sales by Payment Method")
+        st.write("### 💳 Sales by Payment Method")
         
         payment_sales = filtered_data.groupby('Payment')['Total'].sum().sort_values(ascending=False).reset_index()
         
@@ -400,17 +392,17 @@ except Exception as e:
 
 # Visualizations
 try:
-    if 'Date' in data_cleaned.columns and 'Total' in data_cleaned.columns:
+    if 'Date' in filtered_data.columns and 'Total' in filtered_data.columns:
         st.write("### Sales Heatmap by Day and Hour")
-        plot_sales_heatmap(data_cleaned)
+        plot_sales_heatmap(filtered_data)
     else:
         st.warning("Cannot display Sales Heatmap - required columns 'Date' and/or 'Total' are missing.")
 except Exception as e:
     st.error(f"Error displaying Sales Heatmap: {e}")
 
 try:
-    if 'Product line' in data_cleaned.columns and 'Total' in data_cleaned.columns:
-        plot_category_sales(data_cleaned)
+    if 'Product line' in filtered_data.columns and 'Total' in filtered_data.columns:
+        plot_category_sales(filtered_data)
     else:
         st.warning("Cannot display Category Sales - required columns 'Product line' and/or 'Total' are missing.")
 except Exception as e:
@@ -420,8 +412,8 @@ except Exception as e:
 # Forecasting
 st.subheader("Sales Forecast")
 try:
-    if 'Date' in data_cleaned.columns and 'Total' in data_cleaned.columns:
-        prophet_ready_df = prepare_sales_data_for_prophet(data_cleaned, date_column='Date', sales_column='Total')
+    if 'Date' in filtered_data.columns and 'Total' in filtered_data.columns:
+        prophet_ready_df = prepare_sales_data_for_prophet(filtered_data, date_column='Date', sales_column='Total')
         forecast_df, model = predict_sales_with_prophet(prophet_ready_df, periods=30)
         
         # Calculate reference statistics from data, safely handling edge cases
@@ -495,7 +487,7 @@ try:
             - Adjust marketing strategy for the affected product categories
             """)
             
-            # Add download button for critical periods
+            # __download button__
             csv_critical = critical_periods.to_csv(index=False).encode('utf-8')
             st.download_button(
                 label="Download Critical Periods CSV",
@@ -506,7 +498,7 @@ try:
         else:
             st.success(f"✅ Sales forecast looks healthy! No periods below your critical threshold of ₹{critical_threshold:,.2f} detected in the next 30 days.")
             
-            # Show the minimum forecasted value for reference
+            # Minimum forecasted 
             min_forecast = forecast_df['yhat'].min()
             st.info(f"The lowest forecasted sales value is ₹{min_forecast:,.2f}, which is above your threshold.")
     else:
@@ -517,11 +509,11 @@ except Exception as e:
     
     # Add debug information if there's an error
     with st.expander("Debug Information"):
-        if 'Date' in data_cleaned.columns and 'Total' in data_cleaned.columns:
+        if 'Date' in filtered_data.columns and 'Total' in filtered_data.columns:
             st.write("Data sample:")
-            st.write(data_cleaned[['Date', 'Total']].head())
-            st.write(f"Min Total: {data_cleaned['Total'].min()}")
-            st.write(f"Avg Total: {data_cleaned['Total'].mean()}")
+            st.write(filtered_data[['Date', 'Total']].head())
+            st.write(f"Min Total: {filtered_data['Total'].min()}")
+            st.write(f"Avg Total: {filtered_data['Total'].mean()}")
             st.write(f"Error details: {str(e)}")
 
 # Customer Segmentation
@@ -549,17 +541,28 @@ try:
                 st.subheader("Scatter Plot: Quantity vs. Total by Cluster")
                 scatter_data = data_segmented.dropna(subset=['Quantity', 'Total', 'Cluster'])
                 
-                fig_scatter, ax_scatter = plt.subplots(figsize=(8, 5))
-                sns.scatterplot(
-                    data=scatter_data, 
-                    x='Quantity', 
-                    y='Total', 
-                    hue='Cluster', 
-                    palette='viridis', 
-                    ax=ax_scatter
+                scatter_data['Cluster'] = scatter_data['Cluster'].astype(str)
+
+                # Create scatter plot
+                fig_scatter = px.scatter(
+                    scatter_data,
+                    x='Quantity',
+                    y='Total',
+                    color='Cluster',
+                    color_continuous_scale='viridis',  # If Cluster is numeric, use this; otherwise, it will auto handle categorical
+                    title="Clusters Based on Quantity vs. Total",
+                    labels={'Quantity': 'Quantity', 'Total': 'Total', 'Cluster': 'Cluster'},
+                    hover_data=scatter_data.columns  # Optional: shows all columns on hover
                 )
-                ax_scatter.set_title("Clusters Based on Quantity vs. Total")
-                st.pyplot(fig_scatter)
+
+                # Customize layout
+                fig_scatter.update_layout(
+                    height=500,
+                    margin=dict(t=50, b=50, l=30, r=30),
+                )
+
+                # Display in Streamlit
+                st.plotly_chart(fig_scatter, use_container_width=True)
             else:
                 st.warning("Cannot display Cluster Scatter Plot - required columns are missing.")
             
@@ -604,17 +607,17 @@ try:
         if all(col in data_segmented.columns for col in ['Cluster', 'Total']):
             st.subheader("Distribution of Total Spending by Cluster")
             box_data = data_segmented.dropna(subset=['Cluster', 'Total'])
-            
-            fig_box, ax_box = plt.subplots(figsize=(8, 5))
-            sns.boxplot(
-                data=box_data, 
-                x='Cluster', 
-                y='Total', 
-                palette='Spectral', 
-                ax=ax_box
+                        
+            fig_box = px.box(
+                box_data,
+                x='Cluster',
+                y='Total',
+                color='Cluster',
+                title="Box Plot: Distribution of Total Spending by Cluster",
+                color_discrete_sequence=px.colors.diverging.Spectral
             )
-            ax_box.set_title("Box Plot: Distribution of Total Spending by Cluster")
-            st.pyplot(fig_box)
+
+            st.plotly_chart(fig_box, use_container_width=True)
         else:
             st.warning("Cannot display box plot for clusters - missing 'Cluster' or 'Total' column.")
 
@@ -648,8 +651,8 @@ st.header("Churn Prediction")
 
 try:
     # Prepare data for churn prediction
-    if all(col in data_cleaned.columns for col in ['Total', 'Quantity']):
-        X, y = prepare_churn_data(data_cleaned)
+    if all(col in filtered_data.columns for col in ['Total', 'Quantity']):
+        X, y = prepare_churn_data(filtered_data)
 
         if X is not None and y is not None:
             churn_model = train_churn_model(X, y)
@@ -657,12 +660,12 @@ try:
                 st.success("Churn Prediction Model Trained Successfully.")
                 
                 # Predict churn probabilities
-                data_cleaned['Churn Probability'] = churn_model.predict_proba(X)[:, 1]
-                st.write(data_cleaned[['Invoice ID', 'Total', 'Quantity', 'Churn Probability']].head())
+                filtered_data['Churn Probability'] = churn_model.predict_proba(X)[:, 1]
+                st.write(filtered_data[['Invoice ID', 'Total', 'Quantity', 'Churn Probability']].head())
 
                 # Visualization
                 st.subheader("Churn Probability Distribution")
-                fig = px.histogram(data_cleaned, x='Churn Probability', nbins=20, color_discrete_sequence=['#ff7f0e'])
+                fig = px.histogram(filtered_data, x='Churn Probability', nbins=20, color_discrete_sequence=['#ff7f0e'])
                 st.plotly_chart(fig)
             else:
                 st.error("Model training failed.")
@@ -675,13 +678,13 @@ except Exception as e:
 
 # Enable CSV Download
 try:
-    enable_data_download(data_cleaned)
+    enable_data_download(filtered_data)
 except Exception as e:
     st.error(f"Error enabling data download: {e}")
     
     # Fallback download option
     st.write("### Download Cleaned Data")
-    csv = data_cleaned.to_csv(index=False)
+    csv = filtered_data.to_csv(index=False)
     st.download_button(
         label="Download CSV",
         data=csv,
