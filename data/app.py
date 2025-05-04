@@ -3,7 +3,8 @@ import pandas as pd
 import plotly.express as px
 import seaborn as sns
 import plotly.figure_factory as ff
-from feature import customer_segmentation, prepare_churn_data, train_churn_model, predict_sales_with_prophet, prepare_sales_data_for_prophet
+from feature import customer_segmentation, prepare_churn_data, train_churn_model, predict_sales_with_prophet, prepare_sales_data_for_prophet, generate_advanced_suggestions
+
 from visualise import plot_prophet_forecast, plot_sales_heatmap, plot_category_sales, enable_data_download, sales_by_hour, sales_by_Time, sales_by_product_category, product_specific_analysis
 
 st.title("Supermarket Sales Dashboard")
@@ -224,6 +225,7 @@ except Exception as e:
     filtered_data = data_cleaned.copy()
     st.subheader(f"Showing all data: {len(filtered_data)} records")
     data_segmented = data_cleaned.copy()
+
 
 # --- ANALYSIS BY DISTRIBUTION ---
 st.subheader("Sales Distribution Analysis")
@@ -675,6 +677,114 @@ try:
         st.warning("Cannot perform Churn Prediction - required columns are missing.")
 except Exception as e:
     st.error(f"Error during Churn Prediction: {e}")
+
+
+
+# SUGGESTIONS
+
+st.markdown("## 💡Suggestions")
+
+# 0. High-Performing Categories
+if 'Product line' in filtered_data.columns and 'Total' in filtered_data.columns:
+    top3 = (
+        filtered_data.groupby('Product line')['Total']
+        .sum()
+        .nlargest(3)
+        .index
+        .tolist()
+    )
+    with st.expander(f"🌟 Top-performing categories: {', '.join(top3)}"):
+        st.write("These categories drive the highest revenue. Ensure they are well-stocked and consider cross-selling related products.")
+        # Show their recent trend
+        trend_top_df = (
+            filtered_data[filtered_data['Product line'].isin(top3)]
+            .groupby([filtered_data['Date'].dt.to_period('W'), 'Product line'])['Total']
+            .sum()
+            .unstack()
+            .fillna(0)
+        )
+        trend_top_df.index = trend_top_df.index.to_timestamp()
+        st.line_chart(trend_top_df)
+
+
+# 1. Low-Performing Categories
+if 'Product line' in filtered_data.columns and 'Total' in filtered_data.columns:
+    # Compute the bottom 3 categories by total sales
+    bottom3 = (
+        filtered_data.groupby('Product line')['Total']
+        .sum()
+        .nsmallest(3)
+        .index
+        .tolist()
+    )
+    with st.expander(f"⚠️ Low-performing categories: {', '.join(bottom3)}"):
+        st.write("These categories have the lowest total sales. Consider running targeted promotions or discounts.")
+        # Build a small time-series to show their recent trend:
+        trend_df = (
+            filtered_data[filtered_data['Product line'].isin(bottom3)]
+            .groupby([filtered_data['Date'].dt.to_period('W'), 'Product line'])['Total']
+            .sum()
+            .unstack()
+            .fillna(0)
+        )
+        trend_df.index = trend_df.index.to_timestamp()
+        st.line_chart(trend_df)
+
+# 2. Busiest vs Slowest Periods
+if 'Day' in filtered_data.columns and 'Hour' in filtered_data.columns:
+    hm = filtered_data.groupby(['Day','Hour'])['Total'].sum()
+    busiest = max(hm.items(), key=lambda x: x[1])[0]  # (Day, Hour)
+    slowest = min(hm.items(), key=lambda x: x[1])[0]
+    with st.expander(f"⏱️ Busiest period: {busiest[0]} at {busiest[1]}:00"):
+        st.write("Ensure sufficient staffing and stock during this peak time.")
+        # Show a bar chart for that day's hourly sales
+        day_df = (
+            filtered_data[filtered_data['Day'] == busiest[0]]
+            .groupby(filtered_data['Hour'])['Total']
+            .sum()
+            .reindex(range(0,24), fill_value=0)
+            .rename_axis('Hour')
+            .reset_index()
+        )
+        st.bar_chart(day_df.set_index('Hour'))
+    with st.expander(f"🐢 Slowest period: {slowest[0]} at {slowest[1]}:00"):
+        st.write("Consider off-peak discounts or bundle deals to boost traffic.")
+        day_df2 = (
+            filtered_data[filtered_data['Day'] == slowest[0]]
+            .groupby(filtered_data['Hour'])['Total']
+            .sum()
+            .reindex(range(0,24), fill_value=0)
+            .rename_axis('Hour')
+            .reset_index()
+        )
+        st.bar_chart(day_df2.set_index('Hour'))
+
+# 3. Cluster-based Offers
+if 'Cluster' in data_segmented.columns and 'Total' in data_segmented.columns:
+    profiles = data_segmented.groupby('Cluster').agg({'Total':'mean','Quantity':'mean'})
+    avg_total = data_segmented['Total'].mean()
+    with st.expander("🎯 Cluster Insights & Offers"):
+        for cl, row in profiles.iterrows():
+            if row['Total'] > avg_total * 1.2:
+                st.write(f"• Cluster {cl} spends above average (avg ₹{row['Total']:.0f}). Offer VIP loyalty rewards.")
+            else:
+                st.write(f"• Cluster {cl} avg spend ₹{row['Total']:.0f}. Consider bundle-deals to lift basket size.")
+
+# 4. Correlation Highlights
+num = filtered_data.select_dtypes(include='number')
+if not num.empty:
+    corr = num.corr()
+    # pick top 2 strongest off-diagonal pairs
+    pairs = []
+    cols = corr.columns.tolist()
+    for i in range(len(cols)):
+        for j in range(i+1, len(cols)):
+            pairs.append((cols[i], cols[j], corr.iloc[i,j]))
+    pairs.sort(key=lambda x: abs(x[2]), reverse=True)
+    top2 = pairs[:2]
+    with st.expander("🔗 Correlation Highlights"):
+        for a, b, r in top2:
+            st.write(f"• **{a} ↔ {b}** correlation = {r:.2f}; consider exploring this relationship for targeted actions.")
 
 # Enable CSV Download
 try:
