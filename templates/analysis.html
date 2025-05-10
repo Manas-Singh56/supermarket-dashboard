@@ -1,0 +1,316 @@
+{% extends "layout.html" %}
+
+{% block title %}Advanced Analysis - Supermarket Sales Dashboard{% endblock %}
+
+{% block additional_head %}
+<style>
+.insight-card {
+    transition: transform 0.3s ease;
+    margin-bottom: 1rem;
+}
+.insight-card:hover {
+    transform: translateY(-5px);
+}
+.analysis-container {
+    min-height: 400px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h2"><i class="fas fa-chart-pie me-2"></i>Advanced Analysis</h1>
+        <div>
+            <button class="btn btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#filterCollapse">
+                <i class="fas fa-filter me-1"></i>Filter Options
+            </button>
+        </div>
+    </div>
+
+    <div class="collapse mb-4" id="filterCollapse">
+        <div class="card bg-dark">
+            <div class="card-body">
+                <form id="analysisFilterForm" class="row g-3">
+                    <div class="col-md-3">
+                        <label for="categoryFilterAnalysis" class="form-label">Product Category</label>
+                        <select class="form-select" id="categoryFilterAnalysis" name="category">
+                            <option value="All" selected>All Categories</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="customerTypeFilterAnalysis" class="form-label">Customer Type</label>
+                        <select class="form-select" id="customerTypeFilterAnalysis" name="customer_type">
+                            <option value="All" selected>All Types</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="genderFilterAnalysis" class="form-label">Gender</label>
+                        <select class="form-select" id="genderFilterAnalysis" name="gender">
+                            <option value="All" selected>All Genders</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="analysisType" class="form-label">Analysis Type</label>
+                        <select class="form-select" id="analysisType" name="analysis_type">
+                            <option value="segmentation" selected>Customer Segmentation</option>
+                            <option value="correlation">Correlation Analysis</option>
+                            <option value="product">Product Analysis</option>
+                            <option value="time">Time-based Analysis</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Date Range</label>
+                        <div class="row">
+                            <div class="col">
+                                <input type="date" class="form-control" id="startDateAnalysis" name="start_date">
+                            </div>
+                            <div class="col-auto">to</div>
+                            <div class="col">
+                                <input type="date" class="form-control" id="endDateAnalysis" name="end_date">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary me-2">
+                            <i class="fas fa-chart-pie me-1"></i>Generate Analysis
+                        </button>
+                        <button type="button" id="resetAnalysisFiltersBtn" class="btn btn-outline-secondary">
+                            <i class="fas fa-redo me-1"></i>Reset
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Analysis Tabs -->
+    <ul class="nav nav-tabs" id="analysisTab" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="segmentation-tab" data-bs-toggle="tab" data-bs-target="#segmentation" type="button" role="tab">
+                <i class="fas fa-users me-1"></i>Customer Segmentation
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="correlation-tab" data-bs-toggle="tab" data-bs-target="#correlation" type="button" role="tab">
+                <i class="fas fa-project-diagram me-1"></i>Correlation Analysis
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="product-tab" data-bs-toggle="tab" data-bs-target="#product" type="button" role="tab">
+                <i class="fas fa-box me-1"></i>Product Analysis
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="time-tab" data-bs-toggle="tab" data-bs-target="#time" type="button" role="tab">
+                <i class="fas fa-clock me-1"></i>Time Analysis
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="insights-tab" data-bs-toggle="tab" data-bs-target="#insights" type="button" role="tab">
+                <i class="fas fa-lightbulb me-1"></i>Insights
+            </button>
+        </li>
+    </ul>
+    <div class="tab-content" id="analysisTabContent">
+        <!-- Customer Segmentation Tab -->
+        <div class="tab-pane fade show active" id="segmentation" role="tabpanel" aria-labelledby="segmentation-tab">
+            <div class="card bg-dark">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <h3 class="h5 mb-3">Customer Segmentation Analysis</h3>
+                            <div class="form-group mb-3">
+                                <label for="clusterCount" class="form-label">Number of Clusters</label>
+                                <div class="d-flex align-items-center">
+                                    <input type="range" class="form-range me-2" id="clusterCount" min="2" max="6" value="3">
+                                    <span id="clusterCountValue">3</span>
+                                </div>
+                            </div>
+                            <button class="btn btn-primary mb-3" id="runSegmentationBtn">
+                                <i class="fas fa-play me-1"></i>Run Segmentation
+                            </button>
+                            <div class="analysis-container">
+                                <div id="segmentationChart" style="width: 100%; height: 400px;"></div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <h3 class="h5 mb-3">Segment Profiles</h3>
+                            <div id="segmentProfiles">
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle me-2"></i>Run the segmentation analysis to view segment profiles.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Correlation Analysis Tab -->
+        <div class="tab-pane fade" id="correlation" role="tabpanel" aria-labelledby="correlation-tab">
+            <div class="card bg-dark">
+                <div class="card-body">
+                    <h3 class="h5 mb-3">Correlation Analysis</h3>
+                    <p>Discover relationships between different variables in your sales data.</p>
+                    <div class="analysis-container">
+                        <div id="correlationHeatmap" style="width: 100%; height: 500px;"></div>
+                    </div>
+                    <div class="row mt-4" id="correlationInsights">
+                        <div class="col-12">
+                            <h4 class="h6 mb-3">Key Insights</h4>
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>Click "Generate Analysis" to view correlation insights.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Product Analysis Tab -->
+        <div class="tab-pane fade" id="product" role="tabpanel" aria-labelledby="product-tab">
+            <div class="card bg-dark">
+                <div class="card-body">
+                    <h3 class="h5 mb-3">Product Category Analysis</h3>
+                    <div class="row">
+                        <div class="col-md-6 mb-4">
+                            <div id="categoryPerformanceChart" style="width: 100%; height: 400px;"></div>
+                        </div>
+                        <div class="col-md-6 mb-4">
+                            <div id="categoryQuantityChart" style="width: 100%; height: 400px;"></div>
+                        </div>
+                    </div>
+                    <h4 class="h6 mb-3">Product Performance Matrix</h4>
+                    <div class="table-responsive">
+                        <table class="table table-dark table-striped" id="productMatrix">
+                            <thead>
+                                <tr>
+                                    <th>Product Category</th>
+                                    <th>Total Sales</th>
+                                    <th>Quantity Sold</th>
+                                    <th>Avg. Unit Price</th>
+                                    <th>Performance</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Will be populated by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Time Analysis Tab -->
+        <div class="tab-pane fade" id="time" role="tabpanel" aria-labelledby="time-tab">
+            <div class="card bg-dark">
+                <div class="card-body">
+                    <h3 class="h5 mb-3">Time-based Analysis</h3>
+                    <div class="row">
+                        <div class="col-md-6 mb-4">
+                            <div id="hourlyDistributionChart" style="width: 100%; height: 400px;"></div>
+                        </div>
+                        <div class="col-md-6 mb-4">
+                            <div id="dayOfWeekChart" style="width: 100%; height: 400px;"></div>
+                        </div>
+                        <div class="col-12">
+                            <h4 class="h6 mb-3">Sales Heatmap (Day of Week vs. Hour)</h4>
+                            <div id="timeHeatmapChart" style="width: 100%; height: 400px;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Insights Tab -->
+        <div class="tab-pane fade" id="insights" role="tabpanel" aria-labelledby="insights-tab">
+            <div class="card bg-dark">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h3 class="h5 mb-0">Business Insights & Recommendations</h3>
+                        <button class="btn btn-outline-primary" id="generateInsightsBtn">
+                            <i class="fas fa-sync-alt me-1"></i>Generate Insights
+                        </button>
+                    </div>
+                    
+                    <div id="insightsContainer">
+                        <div class="text-center py-5">
+                            <div class="spinner-border text-primary mb-3" role="status" id="insightsSpinner" style="display: none;">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mb-0" id="insightsMessage">Click "Generate Insights" to analyze your data and receive actionable recommendations.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Overlay -->
+<div class="loading-overlay" id="analysisLoadingOverlay">
+    <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading...</span>
+    </div>
+    <div class="mt-2">Analyzing data...</div>
+</div>
+{% endblock %}
+
+{% block additional_scripts %}
+<script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize analysis page
+    initializeAnalysis();
+    
+    // Cluster count slider
+    const clusterCountSlider = document.getElementById('clusterCount');
+    const clusterCountValue = document.getElementById('clusterCountValue');
+    
+    clusterCountSlider.addEventListener('input', function() {
+        clusterCountValue.textContent = this.value;
+    });
+    
+    // Tab change handling
+    const analysisTabs = document.querySelectorAll('button[data-bs-toggle="tab"]');
+    analysisTabs.forEach(tab => {
+        tab.addEventListener('shown.bs.tab', function(event) {
+            const targetId = event.target.getAttribute('data-bs-target').substring(1);
+            loadAnalysisTab(targetId);
+        });
+    });
+    
+    // Initialize first tab
+    loadAnalysisTab('segmentation');
+});
+
+function loadAnalysisTab(tabId) {
+    // Show loading overlay
+    document.getElementById('analysisLoadingOverlay').style.display = 'flex';
+    
+    setTimeout(() => {
+        switch(tabId) {
+            case 'segmentation':
+                fetchCustomerSegmentation();
+                break;
+            case 'correlation':
+                fetchCorrelationAnalysis();
+                break;
+            case 'product':
+                fetchProductAnalysis();
+                break;
+            case 'time':
+                fetchTimeAnalysis();
+                break;
+            case 'insights':
+                fetchInsights();
+                break;
+        }
+        
+        // Hide loading overlay
+        document.getElementById('analysisLoadingOverlay').style.display = 'none';
+    }, 500);
+}
+</script>
+{% endblock %}
