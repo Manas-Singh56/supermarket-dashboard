@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
 import plotly.express as px
 import seaborn as sns
 import plotly.figure_factory as ff
@@ -394,6 +395,113 @@ if st.session_state.data is not None:
             st.subheader("Product Category Analysis")
             product_specific_analysis(filtered_data)
             
+            # Churn Prediction
+            st.subheader("Customer Churn Prediction")
+            st.write("""
+            Churn prediction helps identify customers at risk of leaving. The model uses purchase history,
+            spending habits, and time since last purchase to predict which customers might churn.
+            """)
+            
+            # Run churn prediction
+            with st.expander("Run Churn Prediction", expanded=True):
+                try:
+                    # Check for required columns
+                    if all(col in filtered_data.columns for col in ['Date', 'Total', 'Quantity']):
+                        # Prepare data for churn prediction
+                        X, y = prepare_churn_data(filtered_data)
+                        
+                        if X is not None and y is not None:
+                            st.write(f"Data prepared for churn prediction: {len(X)} records")
+                            
+                            # Display churn distribution
+                            churn_count = pd.Series(y).value_counts().reset_index()
+                            churn_count.columns = ['Churn', 'Count']
+                            # Convert to string first to ensure proper mapping
+                            churn_count['Churn'] = churn_count['Churn'].astype(str)
+                            churn_count['Churn'] = churn_count['Churn'].replace({'0': 'Retained', '1': 'Churned'})
+                            
+                            # Create a pie chart for churn distribution
+                            fig = px.pie(
+                                churn_count, 
+                                values='Count', 
+                                names='Churn',
+                                title='Customer Churn Distribution',
+                                color_discrete_sequence=px.colors.qualitative.Set3,
+                                hole=0.3
+                            )
+                            fig.update_traces(textposition='inside', textinfo='percent+label')
+                            st.plotly_chart(fig, use_container_width=True)
+                            
+                            # Train and evaluate the model
+                            if st.button("Train Churn Prediction Model"):
+                                with st.spinner("Training model..."):
+                                    model = train_churn_model(X, y)
+                                    
+                                    if model is not None:
+                                        # Get feature importance
+                                        feature_importance = pd.DataFrame({
+                                            'Feature': X.columns,
+                                            'Importance': model.feature_importances_
+                                        }).sort_values('Importance', ascending=False)
+                                        
+                                        # Display feature importance
+                                        st.write("### Key Factors Influencing Churn")
+                                        fig = px.bar(
+                                            feature_importance,
+                                            x='Importance',
+                                            y='Feature',
+                                            orientation='h',
+                                            title='Feature Importance in Churn Prediction',
+                                            color='Importance',
+                                            color_continuous_scale='Viridis'
+                                        )
+                                        fig.update_layout(yaxis={'categoryorder': 'total ascending'})
+                                        st.plotly_chart(fig, use_container_width=True)
+                                        
+                                        # Add churn risk to the dataset
+                                        filtered_data_with_risk = filtered_data.copy()
+                                        proba_array = model.predict_proba(X)
+                                        # Extract probability of churning (class 1)
+                                        churn_probs = np.array([prob[1] for prob in proba_array])
+                                        
+                                        # Create risk category
+                                        risk_cats = pd.cut(
+                                            churn_probs, 
+                                            bins=[0, 0.3, 0.7, 1], 
+                                            labels=['Low Risk', 'Medium Risk', 'High Risk']
+                                        )
+                                        
+                                        # Add predictions to data
+                                        risk_df = pd.DataFrame({
+                                            'Churn Probability': churn_probs,
+                                            'Risk Category': risk_cats
+                                        })
+                                        
+                                        # Display high-risk customers
+                                        high_risk = risk_df[risk_df['Risk Category'] == 'High Risk']
+                                        if len(high_risk) > 0:
+                                            st.warning(f"⚠️ {len(high_risk)} customers ({len(high_risk)/len(risk_df)*100:.1f}%) are at high risk of churning.")
+                                            
+                                            # Display actionable insights
+                                            st.write("### Recommended Actions for High-Risk Customers:")
+                                            st.info("""
+                                            1. Personalized re-engagement emails with special offers
+                                            2. Loyalty program enrollment with immediate benefits
+                                            3. Follow-up calls for highest-value at-risk customers
+                                            4. Request feedback to identify potential issues
+                                            """)
+                                        else:
+                                            st.success("No customers are currently at high risk of churning! 🎉")
+                                
+                        else:
+                            st.warning("Couldn't prepare data for churn prediction. Please check your dataset.")
+                    else:
+                        st.warning("Missing required columns for churn prediction. Need: Date, Total, Quantity")
+                except Exception as e:
+                    st.error(f"Error in churn prediction: {e}")
+                    import traceback
+                    st.error(traceback.format_exc())
+                    
             # Business Insights
             st.subheader("Business Insights & Recommendations")
             insights = generate_advanced_suggestions(filtered_data)
