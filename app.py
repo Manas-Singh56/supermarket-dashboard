@@ -153,7 +153,7 @@ def forecast():
 @app.route('/streamlit')
 def streamlit():
     # Provide a link to the Streamlit app
-    streamlit_url = "http://localhost:8000"
+    streamlit_url = "https://supermarket-dashboardpbl.streamlit.app/"
     return redirect(streamlit_url)
 @app.route('/db_health')
 def db_health():
